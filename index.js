@@ -93,7 +93,7 @@ app.post("/sendHook", async function sendText(req, res, next) {
     res.json(result);
 });//sendText
 
-app.post("/sendText", async function sendText(req, res, next) {
+app.post("/send-message", async function sendText(req, res, next) {
     var result = await Sessions.sendText(req);
     res.json(result);
 });//sendText
