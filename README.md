@@ -19,14 +19,15 @@ cara penggunaan
 
 ## Usage
 
-### Start new whatsapp session
+### Start new whatsapp session / multi session
 
 `http://localhost:3333/start?sessionName=session1`
 
-### Get QRCode (quickly!!)
+### Get QRCode
+open terminal
+![image](https://user-images.githubusercontent.com/25816482/124351487-d37c3c80-dc24-11eb-9ccb-e63b8abb533e.png)
 
-`http://localhost:3333/qrcode?sessionName=session1&image=true`
-- png
+
 
 `http://localhost:3333/qrcode?sessionName=session1`
 - json (base64)
