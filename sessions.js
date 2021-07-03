@@ -10,21 +10,21 @@ const axios = require('axios');
 
 module.exports = class Sessions {
 
-    static async start(sessionName, options = []) {
+    static async start(sender, options = []) {
         Sessions.options = Sessions.options || options; //start object
         Sessions.sessions = Sessions.sessions || []; //start array
 
-        var session = Sessions.getSession(sessionName);
+        var session = Sessions.getSession(sender);
 
         if (session == false) { //create new session
             console.log("session == false");
-            session = await Sessions.addSesssion(sessionName);
+            session = await Sessions.addSesssion(sender);
         } else if (["CLOSED"].includes(session.state)) { //restart session
             console.log("session.state == CLOSED");
             session.state = "STARTING";
             session.status = 'notLogged';
-            session.client = Sessions.initSession(sessionName);
-            Sessions.setup(sessionName);
+            session.client = Sessions.initSession(sender);
+            Sessions.setup(sender);
         } else if (["CONFLICT", "UNPAIRED", "UNLAUNCHED"].includes(session.state)) {
             console.log("client.useHere()");
             session.client.then(client => {
@@ -36,17 +36,17 @@ module.exports = class Sessions {
         return session;
     } //start
 
-    static async getStatus(sessionName, options = []) {
+    static async getStatus(sender, options = []) {
         Sessions.options = Sessions.options || options;
         Sessions.sessions = Sessions.sessions || [];
 
-        var session = Sessions.getSession(sessionName);
+        var session = Sessions.getSession(sender);
         return session;
     } //getStatus
 
-    static async addSesssion(sessionName) {
+    static async addSesssion(sender) {
         var newSession = {
-            name: sessionName,
+            name: sender,
             hook: null,
             qrcode: false,
             client: false,
@@ -57,14 +57,14 @@ module.exports = class Sessions {
         console.log("newSession.state: " + newSession.state);
 
         //setup session
-        newSession.client = Sessions.initSession(sessionName);
-        Sessions.setup(sessionName);
+        newSession.client = Sessions.initSession(sender);
+        Sessions.setup(sender);
 
         return newSession;
     } //addSession
 
-    static async initSession(sessionName) {
-        var session = Sessions.getSession(sessionName);
+    static async initSession(sender) {
+        var session = Sessions.getSession(sender);
         session.browserSessionToken = null;
         if (Sessions.options.jsonbinio_secret_key !== undefined) {//se informou secret key pra salvar na nuvem
             //busca token da session na nuvem
@@ -85,14 +85,14 @@ module.exports = class Sessions {
         }//if jsonbinio_secret_key
         if (process.env.ENGINE === 'VENOM') {
             const client = await venom.create(
-                sessionName,
+                sender,
                 (base64Qr, asciiQR, attempts) => {
                     session.state = "QRCODE";
                     session.qrcode = base64Qr;
                 },
                 // statusFind
                 (statusSession, session) => {
-                    console.log('#### status=' + statusSession + ' sessionName=' + session);
+                    console.log('#### status=' + statusSession + ' sender=' + session);
                 }, {
                 folderNameToken: 'tokens',
                 headless: true,
@@ -101,34 +101,14 @@ module.exports = class Sessions {
                 debug: false,
                 logQR: true,
                 browserArgs: [
-                    '--log-level=3',
-                    '--no-default-browser-check',
-                    '--disable-site-isolation-trials',
-                    '--no-experiments',
-                    '--ignore-gpu-blacklist',
-                    '--ignore-certificate-errors',
-                    '--ignore-certificate-errors-spki-list',
-                    '--disable-gpu',
-                    '--disable-extensions',
-                    '--disable-default-apps',
-                    '--enable-features=NetworkService',
-                    '--disable-setuid-sandbox',
-                    '--no-sandbox',
-                    // Extras
-                    '--disable-webgl',
-                    '--disable-threaded-animation',
-                    '--disable-threaded-scrolling',
-                    '--disable-in-process-stack-traces',
-                    '--disable-histogram-customizer',
-                    '--disable-gl-extensions',
-                    '--disable-composited-antialiasing',
-                    '--disable-canvas-aa',
-                    '--disable-3d-apis',
-                    '--disable-accelerated-2d-canvas',
-                    '--disable-accelerated-jpeg-decoding',
-                    '--disable-accelerated-mjpeg-decode',
-                    '--disable-app-list-dismiss-on-blur',
-                    '--disable-accelerated-video-decode',
+				'--no-sandbox',
+				  '--disable-setuid-sandbox',
+				  '--disable-dev-shm-usage',
+				  '--disable-accelerated-2d-canvas',
+				  '--no-first-run',
+				  '--no-zygote',
+				  '--single-process', // <- this one doesn't works in Windows
+				  '--disable-gpu'
                 ],
                 refreshQR: 15000,
                 autoClose: 60000,
@@ -164,34 +144,14 @@ module.exports = class Sessions {
                 debug: false,
                 logQR: true,
                 browserArgs: [
-                    '--log-level=3',
-                    '--no-default-browser-check',
-                    '--disable-site-isolation-trials',
-                    '--no-experiments',
-                    '--ignore-gpu-blacklist',
-                    '--ignore-certificate-errors',
-                    '--ignore-certificate-errors-spki-list',
-                    '--disable-gpu',
-                    '--disable-extensions',
-                    '--disable-default-apps',
-                    '--enable-features=NetworkService',
-                    '--disable-setuid-sandbox',
-                    '--no-sandbox',
-                    // Extras
-                    '--disable-webgl',
-                    '--disable-threaded-animation',
-                    '--disable-threaded-scrolling',
-                    '--disable-in-process-stack-traces',
-                    '--disable-histogram-customizer',
-                    '--disable-gl-extensions',
-                    '--disable-composited-antialiasing',
-                    '--disable-canvas-aa',
-                    '--disable-3d-apis',
-                    '--disable-accelerated-2d-canvas',
-                    '--disable-accelerated-jpeg-decoding',
-                    '--disable-accelerated-mjpeg-decode',
-                    '--disable-app-list-dismiss-on-blur',
-                    '--disable-accelerated-video-decode',
+				'--no-sandbox',
+				  '--disable-setuid-sandbox',
+				  '--disable-dev-shm-usage',
+				  '--disable-accelerated-2d-canvas',
+				  '--no-first-run',
+				  '--no-zygote',
+				  '--single-process', // <- this one doesn't works in Windows
+				  '--disable-gpu'
                 ],
                 disableSpins: true,
                 disableWelcome: false,
@@ -206,8 +166,8 @@ module.exports = class Sessions {
             return client;
         }
     }
-    static async setup(sessionName) {
-        var session = Sessions.getSession(sessionName);
+    static async setup(sender) {
+        var session = Sessions.getSession(sender);
 
         await session.client.then(client => {
             client.onStateChange(state => {
@@ -242,7 +202,7 @@ module.exports = class Sessions {
                 console.log("session.state: " + state);
             }); //.then((client) => Sessions.startProcess(client));
             client.onMessage(async (message) => {
-                var session = Sessions.getSession(sessionName);
+                var session = Sessions.getSession(sender);
                 if (session.hook != null) {
                     var config = {
                         method: 'post',
@@ -259,15 +219,15 @@ module.exports = class Sessions {
                         .catch(function (error) {
                             console.log(error);
                         });
-                } else if (message.body == "TESTEBOT") {
+                } else if (message.body == "hai") {
                     client.sendText(message.from, 'Hello\nfriend!');
                 }
             });
         });
     } //setup
 
-    static async closeSession(sessionName) {
-        var session = Sessions.getSession(sessionName);
+    static async closeSession(sender) {
+        var session = Sessions.getSession(sender);
         if (session) { //só adiciona se não existir
             if (session.state != "CLOSED") {
                 if (session.client)
@@ -290,11 +250,11 @@ module.exports = class Sessions {
         }
     } //close
 
-    static getSession(sessionName) {
+    static getSession(sender) {
         var foundSession = false;
         if (Sessions.sessions)
             Sessions.sessions.forEach(session => {
-                if (sessionName == session.name) {
+                if (sender == session.name) {
                     foundSession = session;
                 }
             });
@@ -309,17 +269,17 @@ module.exports = class Sessions {
         }
     } //getSessions
 
-    static async getQrcode(sessionName) {
-        var session = Sessions.getSession(sessionName);
+    static async getQrcode(sender) {
+        var session = Sessions.getSession(sender);
         if (session) {
             //if (["UNPAIRED", "UNPAIRED_IDLE"].includes(session.state)) {
             if (["UNPAIRED_IDLE"].includes(session.state)) {
                 //restart session
-                await Sessions.closeSession(sessionName);
-                Sessions.start(sessionName);
+                await Sessions.closeSession(sender);
+                Sessions.start(sender);
                 return { result: "error", message: session.state };
             } else if (["CLOSED"].includes(session.state)) {
-                Sessions.start(sessionName);
+                Sessions.start(sender);
                 return { result: "error", message: session.state };
             } else { //CONNECTED
                 if (session.status != 'isLogged') {
@@ -335,16 +295,16 @@ module.exports = class Sessions {
 
     static async sendText(req) {
         var params = {
-            sessionName: req.body.sessionName,
+            sender: req.body.sender,
             number: req.body.number,
-            text: req.body.text
+            message: req.body.message
         }
-        var session = Sessions.getSession(params.sessionName);
+        var session = Sessions.getSession(params.sender);
         if (session) {
             if (session.state == "CONNECTED") {
                 await session.client.then(async client => {
                     console.log('#### send msg =', params);
-                    return await client.sendText(params.number + '@c.us', params.text);
+                    return await client.sendText(params.number + '@c.us', params.message);
                 });
                 return { result: "success" }
             } else {
@@ -357,15 +317,15 @@ module.exports = class Sessions {
 
     static async sendTextToStorie(req) {
         var params = {
-            sessionName: req.body.sessionName,
-            text: req.body.text
+            sender: req.body.sender,
+            message: req.body.message
         }
-        var session = Sessions.getSession(params.sessionName);
+        var session = Sessions.getSession(params.sender);
         if (session) {
             if (session.state == "CONNECTED") {
                 await session.client.then(async client => {
                     console.log('#### send msg =', params);
-                    return await client.sendText('status@broadcast', params.text);
+                    return await client.sendText('status@broadcast', params.message);
                 });
                 return {
                     result: "success"
@@ -384,8 +344,8 @@ module.exports = class Sessions {
         }
     } //message to storie
 
-    static async sendFile(sessionName, number, base64Data, fileName, caption) {
-        var session = Sessions.getSession(sessionName);
+    static async sendFile(sender, number, base64Data, fileName, caption) {
+        var session = Sessions.getSession(sender);
         if (session) {
             if (session.state == "CONNECTED") {
                 var resultSendFile = await session.client.then(async (client) => {
@@ -404,8 +364,8 @@ module.exports = class Sessions {
         }
     } //message
 
-    static async sendImageStorie(sessionName, base64Data, fileName, caption) {
-        var session = Sessions.getSession(sessionName);
+    static async sendImageStorie(sender, base64Data, fileName, caption) {
+        var session = Sessions.getSession(sender);
         if (session) {
             if (session.state == "CONNECTED") {
                 var resultSendFile = await session.client.then(async (client) => {
@@ -433,7 +393,7 @@ module.exports = class Sessions {
     } //sendImageStorie
 
     static async saveHook(req) {
-        var sessionName = req.body.sessionName;
+        var sender = req.body.sender;
         /**
          * Verifica se encontra sessão 
          */
@@ -441,7 +401,7 @@ module.exports = class Sessions {
         var foundSessionId = null;
         if (Sessions.sessions)
             Sessions.sessions.forEach((session, id) => {
-                if (sessionName == session.name) {
+                if (sender == session.name) {
                     foundSession = session;
                     foundSessionId = id;
                 }
@@ -458,8 +418,8 @@ module.exports = class Sessions {
         }
     }
 
-    static async sendContactVcard(sessionName, number, numberCard, nameCard) {
-        var session = Sessions.getSession(sessionName);
+    static async sendContactVcard(sender, number, numberCard, nameCard) {
+        var session = Sessions.getSession(sender);
         if (session) {
             if (session.state == "CONNECTED") {
                 var resultSendContactVcard = await session.client.then(async (client) => {
@@ -482,8 +442,8 @@ module.exports = class Sessions {
         }
     } //vcard
 
-    static async sendVoice(sessionName, number, voice) {
-        var session = Sessions.getSession(sessionName);
+    static async sendVoice(sender, number, voice) {
+        var session = Sessions.getSession(sender);
         if (session) {
             if (session.state == "CONNECTED") {
                 var resultSendVoice = await session.client.then(async (client) => {
@@ -506,8 +466,8 @@ module.exports = class Sessions {
         }
     } //voice
 
-    static async sendLocation(sessionName, number, lat, long, local) {
-        var session = Sessions.getSession(sessionName);
+    static async sendLocation(sender, number, lat, long, local) {
+        var session = Sessions.getSession(sender);
         if (session) {
             if (session.state == "CONNECTED") {
                 var resultSendLocation = await session.client.then(async (client) => {
@@ -530,8 +490,8 @@ module.exports = class Sessions {
         }
     } //location
 
-    static async sendLinkPreview(sessionName, number, url, caption) {
-        var session = Sessions.getSession(sessionName);
+    static async sendLinkPreview(sender, number, url, caption) {
+        var session = Sessions.getSession(sender);
         if (session) {
             if (session.state == "CONNECTED") {
                 var resultSendLinkPreview = await session.client.then(async (client) => {
@@ -554,8 +514,8 @@ module.exports = class Sessions {
         }
     } //link
 
-    static async getAllChatsNewMsg(sessionName) {
-        var session = Sessions.getSession(sessionName);
+    static async getAllChatsNewMsg(sender) {
+        var session = Sessions.getSession(sender);
         if (session) {
             if (session.state == "CONNECTED") {
                 var resultGetAllChatsNewMsg = await session.client.then(async (client) => {
@@ -578,8 +538,8 @@ module.exports = class Sessions {
         }
     } //getAllChatsNewMsg
 
-    static async getAllUnreadMessages(sessionName) {
-        var session = Sessions.getSession(sessionName);
+    static async getAllUnreadMessages(sender) {
+        var session = Sessions.getSession(sender);
         if (session) {
             if (session.state == "CONNECTED") {
                 var resultGetAllUnreadMessages = await session.client.then(async (client) => {
@@ -602,9 +562,9 @@ module.exports = class Sessions {
         }
     } //getAllUnreadMessages
 
-    static async checkNumberStatus(sessionName, number) {
-        var session = Sessions.getSession(sessionName);
-        //console.log(sessionName+number);
+    static async checkNumberStatus(sender, number) {
+        var session = Sessions.getSession(sender);
+        //console.log(sender+number);
         if (session) {
             if (session.state == "CONNECTED") {
                 var resultcheckNumberStatus = await session.client.then(async (client) => {
@@ -627,9 +587,9 @@ module.exports = class Sessions {
         }
     } //saber se o número é válido
 
-    static async getNumberProfile(sessionName, number) {
-        var session = Sessions.getSession(sessionName);
-        //console.log(sessionName+number);
+    static async getNumberProfile(sender, number) {
+        var session = Sessions.getSession(sender);
+        //console.log(sender+number);
         if (session) {
             if (session.state == "CONNECTED") {
                 var resultgetNumberProfile = await session.client.then(async (client) => {
