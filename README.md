@@ -44,7 +44,7 @@ open terminal
     },
     body: JSON.stringify(
         {
-            seender: "session1", 
+            sender: "session1", 
             number: '556334140378',
             message:"Hello\nWorld"
         }
